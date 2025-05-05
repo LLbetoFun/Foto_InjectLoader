@@ -1,0 +1,154 @@
+plugins {
+    id 'java-library'
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
+    id 'application'
+}
+
+group = 'cxy.fun'
+version = '1.0'
+
+repositories {
+    mavenCentral()
+}
+configurations {
+    pack{
+        extendsFrom implementation  // 继承implementation的所有特性
+        canBeConsumed = false       // 避免被其他项目依赖
+        canBeResolved = true        // 允许解析依赖
+    }
+}
+jar {
+    from {
+        // 只包含自定义配置中的依赖
+        configurations.pack.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+    // 包含你自己的编译输出
+    from sourceSets.main.output
+    exclude('LICENSE.txt', 'NOTICE.txt', 'rootdoc.txt')
+    exclude 'META-INF/*.RSA', 'META-INF/*.SF', 'META-INF/*.DSA'
+    exclude 'META-INF/NOTICE', 'META-INF/NOTICE.txt'
+    exclude 'META-INF/LICENSE', 'META-INF/LICENSE.txt'
+    exclude 'META-INF/DEPENDENCIES'
+    manifest {
+        attributes(
+                'Main-Class': 'com.fun.inject.Main',  // 指定主类
+                'Implementation-Title': project.name,
+                'Implementation-Version': project.version
+        )
+    }
+}
+build{
+    shadowJar
+}
+dependencies {
+    // ASM 核心库
+    implementation 'org.ow2.asm:asm:9.6' // 截至2024年5月最新版本
+
+    // ASM 树API（可选）
+    implementation   'org.ow2.asm:asm-tree:9.6'
+
+    // ASM Commons 工具（可选）
+    implementation   'org.ow2.asm:asm-commons:9.6'
+
+    // ASM Util 工具（可选）
+    implementation   'org.ow2.asm:asm-util:9.6'
+
+    implementation   'commons-io:commons-io:2.16.1'
+
+    implementation   'net.java.dev.jna:jna:+'  // 核心JNA库
+
+    implementation   'net.java.dev.jna:jna-platform:+'  // 平台特定的功能
+
+    implementation   'org.apache.commons:commons-compress:1.26.0'
+
+    implementation   'org.jetbrains:annotations:24.1.0'
+
+    compileOnly 'org.projectlombok:lombok:1.18.30'
+    annotationProcessor 'org.projectlombok:lombok:1.18.30'
+}
+
+
+
+ext {
+    cmakeBuildDir = file("$rootDir/cmake-build-debug")
+    nativeLibsDir = file("build/natives")
+    cmakeBuildType = project.hasProperty('debug') ? 'Debug' : 'Release'
+}
+
+tasks.register('createBuildDirs') {
+    doLast {
+        cmakeBuildDir.mkdirs()
+        nativeLibsDir.mkdirs()
+    }
+}
+
+tasks.register('cmakeConfigure', Exec) {
+    dependsOn 'createBuildDirs'
+
+    // 允许命令执行失败（手动检查退出码）
+    ignoreExitValue = true
+
+    commandLine 'cmake',
+            "-B${cmakeBuildDir}",
+            "-DCMAKE_INSTALL_PREFIX=${nativeLibsDir}",
+            "-DCMAKE_BUILD_TYPE=${cmakeBuildType}",
+            "-S${projectDir}"
+
+    // 正确的退出码检查方式
+    doLast {
+
+    }
+}
+
+tasks.register('cmakeBuild', Exec) {
+    dependsOn 'cmakeConfigure'
+
+    // 允许命令执行失败（手动检查退出码）
+    ignoreExitValue = true
+
+    if (org.gradle.internal.os.OperatingSystem.current().windows) {
+        commandLine 'cmake',
+                '--build', cmakeBuildDir,
+                '--config', cmakeBuildType,
+                '--target', 'all',
+                '--', '-j', '14'
+    } else {
+        commandLine 'cmake',
+                '--build', cmakeBuildDir,
+                '--parallel', Runtime.runtime.availableProcessors().toString(),
+                '--target', 'install'
+    }
+
+    // 正确的退出码检查方式
+    doLast {
+
+    }
+}
+
+tasks.register('cmakeClean', Delete) {
+    delete cmakeBuildDir
+    delete nativeLibsDir
+}
+
+compileJava {
+    dependsOn 'cmakeBuild'
+}
+application {
+    mainClass = 'com.fun.inject.Main'
+}
+processResources {
+    from(nativeLibsDir) {
+        into 'natives'
+        include '**/*.dll', '**/*.so', '**/*.dylib'
+    }
+}
+
+clean {
+    dependsOn 'cmakeClean'
+}
+
+// 禁用默认的 jar 任务
+jar.enabled = false
+
+// 确保 build 任务依赖 shadowJar
+build.dependsOn shadowJar

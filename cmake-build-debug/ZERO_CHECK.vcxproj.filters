@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="D:\LLbetoFun\Foto_InjectLoader\cmake-build-debug\CMakeFiles\4491c422a0ac8956ef4d6dc2dbb9a983\generate.stamp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{CD07226B-6EB3-3DB0-803D-29D659C9E069}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>
