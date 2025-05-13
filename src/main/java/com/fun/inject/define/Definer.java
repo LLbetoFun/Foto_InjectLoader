@@ -2,7 +2,7 @@ package com.fun.inject.define;
 
 import com.fun.inject.Bootstrap;
 import com.fun.inject.utils.NativeUtils;
-import com.fun.inject.transform.api.Transformers;
+import com.fun.inject.transform.api.asm.Transformers;
 import com.fun.inject.utils.ReflectionUtils;
 import org.apache.commons.io.FileUtils;
 import org.objectweb.asm.Opcodes;

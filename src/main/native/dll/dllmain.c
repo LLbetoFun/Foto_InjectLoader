@@ -210,15 +210,13 @@ jclass JNICALL findClass0(JNIEnv *jniEnv, const char *name, jobject classloader)
                                                 (*jniEnv)->NewStringUTF(jniEnv, name));
 }
 extern JNIEXPORT jclass JNICALL findClass(JNIEnv *jniEnv, const char *name) {
-    char* newName= replace(name,"com.fun",newPackage);
-    //MessageBoxA(NULL, newName, "FishCient", 0);
     jclass ClassLoader = (*jniEnv)->FindClass(jniEnv, "java/lang/ClassLoader");
     jmethodID getSystemClassLoader = (*jniEnv)->GetStaticMethodID(jniEnv, ClassLoader, "getSystemClassLoader",
                                                                   "()Ljava/lang/ClassLoader;");
 
     jobject classloader;
     classloader = (*jniEnv)->CallStaticObjectMethod(jniEnv, ClassLoader, getSystemClassLoader);
-    return findClass0(jniEnv,newName,classloader);
+    return findClass0(jniEnv,name,classloader);
 }
 
 
@@ -246,7 +244,7 @@ extern JNIEXPORT void JNICALL classFileLoadHook(jvmtiEnv * jvmti_env, JNIEnv * e
     findClass(env, "com.fun.inject.utils.NativeUtils");
 
     if(!nativeUtils){
-        MessageBoxA(NULL,"NativeUtils was null","Fish",0);
+        MessageBoxA(NULL,"NativeUtils was null","Foto",0);
         return;
     }
     jmethodID transform = (*env)->GetStaticMethodID(env,nativeUtils, "transform",

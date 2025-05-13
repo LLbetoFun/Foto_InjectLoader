@@ -1,7 +1,7 @@
-package com.fun.inject.transform.mixin.annotations;
+package com.fun.inject.transform.api.mixin.annotations;
 
 
-import com.fun.inject.transform.mixin.StringPair;
+import com.fun.inject.transform.api.mixin.StringPair;
 import com.fun.utils.asm.ASMUtils;
 import org.jetbrains.annotations.NotNull;
 import org.objectweb.asm.tree.*;

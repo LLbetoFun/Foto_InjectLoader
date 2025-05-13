@@ -1,13 +1,12 @@
 package com.fun.inject;
 
 
-import com.fun.api.interfaces.FotoInjection;
 import com.fun.inject.define.Definer;
 import com.fun.inject.mapper.Mapper;
 import com.fun.inject.mapper.RemapException;
 import com.fun.inject.transform.impl.GameClassTransformer;
-import com.fun.inject.transform.api.Transformer;
-import com.fun.inject.transform.api.Transformers;
+import com.fun.inject.transform.api.asm.Transformer;
+import com.fun.inject.transform.api.asm.Transformers;
 import com.fun.inject.utils.InjectUtils;
 import com.fun.inject.utils.Native;
 import com.fun.inject.utils.NativeUtils;
@@ -45,6 +44,8 @@ public class Bootstrap {
     public static String[] selfClasses = new String[]{"com.fun", "org.newdawn", "javax.vecmath", "org.objectweb", "org.jetbrains.skija", "org.joml", "org.java_websocket"};
     public static List<String> transformClasses = new ArrayList<>();
     public static List<String> injectionMainClasses = new ArrayList<>();
+    public static List<String> mixinClasses = new ArrayList<>();
+
     public static ClassLoader classLoader;
 
     private static byte[] readStream(InputStream inStream) throws Exception {
@@ -157,6 +158,19 @@ public class Bootstrap {
                     }
                 });
         }));
+
+    }
+    private static void pretreatClassCache(){
+        classes.keySet().forEach((s -> {
+            byte[] classBytes = classes.get(s);
+            ClassNode classNode = Transformers.node(classBytes);
+            if(classNode.visibleAnnotations != null)
+                classNode.visibleAnnotations.forEach(annotationNode -> {
+                    if (annotationNode.desc.equals("Lcom/fun/inject/transform/api/mixin/annotations/Mixin;")) {
+                        mixinClasses.add(s);
+                    }
+                });
+        }));
     }
     public static void startInjectThread() {//启动注入线程
         new Thread(Bootstrap::inject).start();
@@ -249,6 +263,9 @@ public class Bootstrap {
 
         cacheJar(targetJar);
         //cache
+
+        //pretreatClassCache();
+        //pretreatment
 
         NativeUtils.addToSystemClassLoaderSearch(targetJar.getAbsolutePath());
         if (classLoader.getClass().getName().contains("launchwrapper") || classLoader.getClass().getName().contains("modlauncher")) {

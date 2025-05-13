@@ -1,4 +1,4 @@
-package com.fun.inject.transform.api;
+package com.fun.inject.transform.api.asm;
 
 
 import com.fun.inject.Bootstrap;
@@ -16,26 +16,26 @@ public class Transformer {
     public Transformer() {
         super();
     }
-    private Transformer(String name) {
-        name = name.replace('.', '/');
-        this.name = name;
-        obfName = Mapper.getMappedClass(name);
-        if (obfName != null) {
-            try {
-                clazz = Bootstrap.findClass(obfName);
-                //oldBytes = InjectUtils.getClassBytes(clazz);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
-    private Transformer(Class<?> clazz) {
+    public Transformer setTarget(Class<?> clazz) {
 //        this.name = Mapper.getMappedClass(Type.getInternalName(clazz));
 //        this.obfName = Type.getInternalName(clazz);
 //
 //        this.clazz = clazz;
-        this(Mapper.getMappedClass(Type.getInternalName(clazz)));
+        return setTarget(Mapper.getMappedClass(Type.getInternalName(clazz)));
+        //System.out.println("Transformer " + clazz.getName() + " loaded");
+
+    }
+    public Transformer setTarget(String name){
+        name = name.replace('.', '/');
+        this.name = name;
+        obfName = Mapper.getMappedClass(name);
+        try {
+            clazz = Bootstrap.findClass(obfName);
+            //oldBytes = InjectUtils.getClassBytes(clazz);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return this;
     }
 
     public byte[] getOldBytes() {

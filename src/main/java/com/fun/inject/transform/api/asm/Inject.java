@@ -1,4 +1,4 @@
-package com.fun.inject.transform.api;
+package com.fun.inject.transform.api.asm;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;

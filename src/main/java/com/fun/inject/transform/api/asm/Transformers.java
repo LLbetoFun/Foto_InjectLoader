@@ -1,10 +1,10 @@
-package com.fun.inject.transform.api;
+package com.fun.inject.transform.api.asm;
 
 
 import com.fun.api.annotations.Transform;
 import com.fun.inject.Bootstrap;
 import com.fun.inject.mapper.Mapper;
-import com.fun.inject.transform.mixin.annotations.Mixin;
+import com.fun.inject.transform.api.mixin.annotations.Mixin;
 import com.fun.inject.utils.FishClassWriter;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
@@ -62,8 +62,9 @@ public class Transformers {
                 Class<?> c=Class.forName(tClass);
                 Transform transform=c.getAnnotation(Transform.class);
                 if(c.getSuperclass() == Transformer.class) {
-                    Constructor<Transformer> constructor = Transformer.class.getDeclaredConstructor(Class.class);
-                    transformers.add(constructor.newInstance(transform.clazz()));
+                    Constructor<Transformer> constructor = (Constructor<Transformer>) c.getDeclaredConstructor();
+                    constructor.setAccessible(true);
+                    transformers.add(constructor.newInstance().setTarget(transform.clazz()));
                     System.out.println("Transformer " + c.getName() + " loaded");
                 }
 

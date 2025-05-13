@@ -5,7 +5,7 @@ plugins {
 }
 
 group = 'cxy.fun'
-version = '1.0'
+version = '1.0.1-b1'
 
 repositories {
     mavenCentral()

@@ -3,9 +3,9 @@ package com.fun.inject.transform.impl;
 import com.fun.inject.Bootstrap;
 import com.fun.inject.mapper.Mapper;
 import com.fun.inject.transform.IClassTransformer;
-import com.fun.inject.transform.api.Inject;
-import com.fun.inject.transform.api.Transformer;
-import com.fun.inject.transform.api.Transformers;
+import com.fun.inject.transform.api.asm.Inject;
+import com.fun.inject.transform.api.asm.Transformer;
+import com.fun.inject.transform.api.asm.Transformers;
 import com.fun.inject.utils.FishClassWriter;
 import org.apache.commons.io.FileUtils;
 import org.objectweb.asm.ClassReader;
@@ -61,7 +61,7 @@ public class GameClassTransformer implements IClassTransformer {
                 //System.out.println("1");
                 for (Method method : transformer.getClass().getDeclaredMethods()) {
                     //System.out.println("2");
-                    //Agent.System.out.println(method.toString());
+                    //System.out.println(method.toString());
                     if (method.isAnnotationPresent(Inject.class)) {
 
                         if (method.getParameterCount() != 1 || !MethodNode.class.isAssignableFrom(method.getParameterTypes()[0]))
@@ -73,16 +73,15 @@ public class GameClassTransformer implements IClassTransformer {
                         String desc = inject.descriptor();
 
                         String obfName = Mapper.getMappedMethod(methodToModify, transformer.getName(), desc);
-                        String obfDesc = Mapper.getMappedMethodDesc(desc);//Mappings.getMappedMethod(methodToModify);
+                        String obfDesc = Mapper.getMappedMethodDesc(desc);
                         if (obfName == null || obfName.isEmpty()) {
                             //System.out.println("Could not find {} in class {}", methodToModify, transformer.getName());
                             continue;
                         }
 
-                        System.out.println(obfDesc + " " + obfName);
-                        // huh???
+
                         for (MethodNode mNode : node.methods) {
-                            //System.out.println(mNode.name+mNode.desc);
+
                             if (mNode.name.equals(obfName) && mNode.desc.equals(obfDesc)) {
                                 try {
                                     method.invoke(transformer, mNode);

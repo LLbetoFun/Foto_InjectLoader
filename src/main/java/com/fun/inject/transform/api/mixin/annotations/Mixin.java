@@ -1,4 +1,4 @@
-package com.fun.inject.transform.mixin.annotations;
+package com.fun.inject.transform.api.mixin.annotations;
 
 import com.fun.inject.Bootstrap;
 import com.fun.utils.asm.ASMUtils;

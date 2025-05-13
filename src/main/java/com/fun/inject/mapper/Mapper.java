@@ -10,6 +10,10 @@ import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Handle;
 import org.objectweb.asm.Type;
+import org.objectweb.asm.commons.Remapper;
+import org.objectweb.asm.commons.SignatureRemapper;
+import org.objectweb.asm.signature.SignatureReader;
+import org.objectweb.asm.signature.SignatureWriter;
 import org.objectweb.asm.tree.*;
 
 import java.io.*;
@@ -120,21 +124,34 @@ public class Mapper {
             ArrayList<MethodNode> removeMethods = new ArrayList<>();
             ArrayList<FieldNode> removeField = new ArrayList<>();
             //System.out.println("start remap: "+classNode.name);
+            if (classNode.visibleAnnotations != null) {
+                for (AnnotationNode annotationNode : classNode.visibleAnnotations) {
+                    //System.out.println(annotationNode.desc);
+                    List<Object> values = annotationNode.values;
+                    for (int i = 0; i < values.size(); i++) {
+                        Object object = values.get(i);
+                        if (object instanceof Type type) {
+                            values.set(i,Type.getType(getMappedFieldDesc(type.getDescriptor())));
+                        }
+
+                    }
+                }
+            }
+            if(classNode.signature != null) {
+                System.out.println(getMappedSignatureDesc(classNode.signature));
+                classNode.signature=getMappedSignatureDesc(classNode.signature);
+            }
             for (MethodNode methodNode : classNode.methods) {
                 if (methodNode.visibleAnnotations != null) {
                     for (AnnotationNode annotationNode : methodNode.visibleAnnotations) {
-                        if (annotationNode.desc.equals("Lcom/fun/inject/mapper/SideOnly;")) {
-                            for (Object object : annotationNode.values) {
-                                if (object instanceof String[]) {
-                                    for (String s : (String[]) object) {
-                                        if ((s.equals("AGENT") && !Bootstrap.isRemote)
-                                                || (s.equals("INJECTOR") && Bootstrap.isRemote)) {
-                                            removeMethods.add(methodNode);
-                                            break;
-                                        }
-                                    }
-                                }
+                        //System.out.println(annotationNode.desc);
+                        List<Object> values = annotationNode.values;
+                        for (int i = 0; i < values.size(); i++) {
+                            Object object = values.get(i);
+                            if (object instanceof Type type) {
+                                values.set(i,Type.getType(getMappedFieldDesc(type.getDescriptor())));
                             }
+
                         }
                     }
                 }
@@ -407,6 +424,13 @@ public class Mapper {
         }
         return sb.toString();
     }
+    public static String getMappedSignatureDesc(String desc) {
+        SignatureReader sr = new SignatureReader(desc);
+        SignatureWriter sw = new SignatureWriter();
+        SignatureRemapper sm= new SignatureRemapper(sw,new ASMRemapper());
+        sr.accept(sm);
+        return sw.toString();
+    }
 
     public static void readMappings(String jarPath, MinecraftType mcType) throws RemapException {
         try (JarFile jar = new JarFile(jarPath)) {
@@ -414,8 +438,14 @@ public class Mapper {
             if (mcType == MinecraftType.VANILLA) {
                 f = IOUtils.getEntryFromJar(jar, "mappings/vanilla.srg");
             }
-            if (mcType == MinecraftType.FORGE) {
+            else if (mcType == MinecraftType.FORGE) {
                 f = IOUtils.getEntryFromJar(jar, "mappings/forge.srg");
+            }
+            else if (mcType == MinecraftType.FABRIC) {
+                f = IOUtils.getEntryFromJar(jar, "mappings/fabric.srg");
+            }
+            else {
+                return;
             }
             if (f != null) {
                 BufferedReader bufferedreader = new BufferedReader(new InputStreamReader(f, StandardCharsets.UTF_8));
@@ -455,11 +485,14 @@ public class Mapper {
             if (mcType == MinecraftType.VANILLA) {
                 f = IOUtils.getEntryFromJar(jar, String.format("mappings/%s/vanilla.srg",version.getVer()));
             }
-            if (mcType == MinecraftType.FORGE) {
+            else if (mcType == MinecraftType.FORGE) {
                 f = IOUtils.getEntryFromJar(jar, String.format("mappings/%s/forge.srg",version.getVer()));
             }
-            if (mcType == MinecraftType.FABRIC) {
+            else if (mcType == MinecraftType.FABRIC) {
                 f = IOUtils.getEntryFromJar(jar, String.format("mappings/%s/fabric.srg",version.getVer()));
+            }
+            else{
+                return;
             }
             BufferedReader bufferedreader = new BufferedReader(new InputStreamReader(f, StandardCharsets.UTF_8));
             String line = "";
@@ -487,6 +520,12 @@ public class Mapper {
         }
 
 
+    }
+    public static class ASMRemapper extends Remapper{
+        @Override
+        public String mapType(String internalName) {
+            return getMappedClass(internalName);
+        }
     }
 
 

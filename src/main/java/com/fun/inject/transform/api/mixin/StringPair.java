@@ -1,4 +1,4 @@
-package com.fun.inject.transform.mixin;
+package com.fun.inject.transform.api.mixin;
 
 import lombok.AllArgsConstructor;
 
