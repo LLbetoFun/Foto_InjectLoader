@@ -57,14 +57,14 @@ public class Transformers {
     public static void init() {
         Transformers.transformers.clear();
 
-        Bootstrap.transformClasses.forEach(tClass -> {
+        Bootstrap.transformMap.keySet().forEach(tClass -> {
             try {
                 Class<?> c=Class.forName(tClass);
-                Transform transform=c.getAnnotation(Transform.class);
+                String targetKlass = Bootstrap.transformMap.get(tClass).getInternalName();
                 if(c.getSuperclass() == Transformer.class) {
                     Constructor<Transformer> constructor = (Constructor<Transformer>) c.getDeclaredConstructor();
                     constructor.setAccessible(true);
-                    transformers.add(constructor.newInstance().setTarget(transform.clazz()));
+                    transformers.add(constructor.newInstance().setTarget(Bootstrap.findClass(targetKlass)));
                     System.out.println("Transformer " + c.getName() + " loaded");
                 }
 

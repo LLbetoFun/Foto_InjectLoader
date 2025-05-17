@@ -1,9 +1,11 @@
 package com.fun.inject;
 
 
+import com.fun.api.InjectionProvider;
 import com.fun.inject.define.Definer;
 import com.fun.inject.mapper.Mapper;
 import com.fun.inject.mapper.RemapException;
+import com.fun.inject.transform.api.mixin.annotations.Mixin;
 import com.fun.inject.transform.impl.GameClassTransformer;
 import com.fun.inject.transform.api.asm.Transformer;
 import com.fun.inject.transform.api.asm.Transformers;
@@ -13,10 +15,14 @@ import com.fun.inject.utils.NativeUtils;
 import com.fun.inject.utils.ReflectionUtils;
 import com.fun.inject.version.MinecraftType;
 import com.fun.inject.version.MinecraftVersion;
+import com.fun.utils.asm.ASMUtils;
 import com.fun.utils.file.FileUtils;
+import org.objectweb.asm.Type;
+import org.objectweb.asm.tree.AnnotationNode;
 import org.objectweb.asm.tree.ClassNode;
 
 import java.io.*;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URISyntaxException;
@@ -24,6 +30,7 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -35,16 +42,16 @@ public class Bootstrap {
     //isRemote
     public static boolean isRemote = false;
     public static int SERVERPORT = 11432;
-    public static Map<String, byte[]> classes = new HashMap<>();
+    public static Map<String, byte[]> classes = new ConcurrentHashMap<>();
     public static Native instrumentation;
     public static GameClassTransformer transformer;
     public static MinecraftType minecraftType = MinecraftType.VANILLA;
     public static MinecraftVersion minecraftVersion = MinecraftVersion.VER_189;
     @Deprecated
     public static String[] selfClasses = new String[]{"com.fun", "org.newdawn", "javax.vecmath", "org.objectweb", "org.jetbrains.skija", "org.joml", "org.java_websocket"};
-    public static List<String> transformClasses = new ArrayList<>();
-    public static List<String> injectionMainClasses = new ArrayList<>();
-    public static List<String> mixinClasses = new ArrayList<>();
+    public static Map<String,Type> transformMap = new HashMap<>();//trans clzz,target clzz
+    public static Map<File,String> injectionsMap = new HashMap<>();
+    public static Map<Mixin,ClassNode> mixinMap = new HashMap<>();
 
     public static ClassLoader classLoader;
 
@@ -143,34 +150,36 @@ public class Bootstrap {
     private static void clearClassCache() {
         classes.clear();
     }
-    private static void parseAPIsInCache() {
+    private static void parseAPIsInCache(File jar) {
         classes.keySet().forEach((s -> {
             byte[] classBytes = classes.get(s);
             ClassNode classNode = Transformers.node(classBytes);
-            if(classNode.visibleAnnotations != null)
-                classNode.visibleAnnotations.forEach(annotationNode -> {
+            boolean remove = false;
+            if(classNode.visibleAnnotations != null) {
+                Iterator<AnnotationNode> iterator = classNode.visibleAnnotations.iterator();
+                while (iterator.hasNext()) {
+                    AnnotationNode annotationNode = iterator.next();
                     if (annotationNode.desc.equals("Lcom/fun/api/annotations/Injection;")) {
-                        injectionMainClasses.add(s);
+                        injectionsMap.put(jar, s);
 
                     }
                     if (annotationNode.desc.equals("Lcom/fun/api/annotations/Transform;")) {
-                        transformClasses.add(s);
+                        transformMap.put(s, ASMUtils.getAnnotationValue(annotationNode, "clazz"));
+                        iterator.remove();
+
                     }
-                });
+                    if (annotationNode.desc.equals("Lcom/fun/inject/transform/api/mixin/annotations/Mixin;")) {
+                        Mixin mixin = Mixin.Helper.fromNode(annotationNode);
+                        mixinMap.put(mixin,Mapper.mapRedirect(classNode,classNode.name,
+                                Mapper.getMappedClass(mixin.value())));//. name -> internal name
+                        remove = true;
+                    }
+                }
+            }
+            if(!remove) classes.put(s,Transformers.rewriteClass(classNode));
+            else classes.remove(s);
         }));
 
-    }
-    private static void pretreatClassCache(){
-        classes.keySet().forEach((s -> {
-            byte[] classBytes = classes.get(s);
-            ClassNode classNode = Transformers.node(classBytes);
-            if(classNode.visibleAnnotations != null)
-                classNode.visibleAnnotations.forEach(annotationNode -> {
-                    if (annotationNode.desc.equals("Lcom/fun/inject/transform/api/mixin/annotations/Mixin;")) {
-                        mixinClasses.add(s);
-                    }
-                });
-        }));
     }
     public static void startInjectThread() {//启动注入线程
         new Thread(Bootstrap::inject).start();
@@ -231,31 +240,40 @@ public class Bootstrap {
                 }
             }
 
-            injectionMainClasses.forEach(c -> {
-                try {
-                    System.out.println("Init injection main class:"+c);
-                    Class<?> mainClass = findClass(c);
-                    Object fotoInjection= mainClass.getConstructor().newInstance();
-                    for (Method m : mainClass.getDeclaredMethods()) {
-                        if (m.getName().equals("initialize")) {
-
-                            m.invoke(fotoInjection);
-
-                        }
-                    }
-
-                } catch (ClassNotFoundException | IllegalAccessException | InvocationTargetException |
-                         NoSuchMethodException | InstantiationException e) {
-                    throw new RuntimeException(e);
-                }
-
-            });
+            createInjections();
         } catch (Exception e) {
             e.printStackTrace();
         }
         transform();
 
 
+    }
+    private static Object createProvider(File file) throws ClassNotFoundException, NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException {
+        Class<?> clazz = findClass(InjectionProvider.class.getName());
+        Constructor<?> constructor = clazz.getConstructor(File.class);
+        return constructor.newInstance(file);
+    }
+    private static void createInjections(){
+        injectionsMap.keySet().forEach(injection -> {
+            try {
+                String c = injectionsMap.get(injection);
+                System.out.println("Init injection main class:"+c);
+                Class<?> mainClass = findClass(c);
+                Object fotoInjection= mainClass.getConstructor().newInstance();
+                for (Method m : mainClass.getDeclaredMethods()) {
+                    if (m.getName().equals("initialize")) {
+
+                        m.invoke(fotoInjection,createProvider(injection));
+
+                    }
+                }
+
+            } catch (ClassNotFoundException | IllegalAccessException | InvocationTargetException |
+                     NoSuchMethodException | InstantiationException e) {
+                throw new RuntimeException(e);
+            }
+
+        });
     }
     private static void loadJar(File targetJar) throws Exception {
         targetJar=Mapper.mapJar(targetJar, minecraftVersion, minecraftType);
@@ -275,7 +293,7 @@ public class Bootstrap {
         }
         //define/addpath
 
-        parseAPIsInCache();
+        parseAPIsInCache(targetJar);
         //load apis
 
         clearClassCache();

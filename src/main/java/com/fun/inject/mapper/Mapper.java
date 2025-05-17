@@ -1,11 +1,10 @@
 package com.fun.inject.mapper;
 
 import com.fun.inject.Bootstrap;
+import com.fun.inject.utils.FishClassWriter;
 import com.fun.inject.version.MinecraftType;
 import com.fun.inject.version.MinecraftVersion;
-import com.fun.inject.utils.FishClassWriter;
 import com.fun.utils.file.IOUtils;
-
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Handle;
@@ -272,6 +271,52 @@ public class Mapper {
             System.out.println(classNode.name + " " + desc + "|");
         }
         return new byte[0];
+    }
+
+    public static ClassNode mapRedirect(ClassNode classNode, String className, String targetName) {
+        classNode.methods.forEach((m) -> {
+            try {
+                for (AbstractInsnNode insnNode : m.instructions) {
+                    if (insnNode instanceof MethodInsnNode) {
+                        if (className.equals(((MethodInsnNode) insnNode).owner)) {
+                            Class<?> owner = Bootstrap.findClass(getMappedClass(((MethodInsnNode) insnNode).owner.replace(className, targetName)));
+
+                            ((MethodInsnNode) insnNode).name = getMappedMethod(((MethodInsnNode) insnNode).name,
+                                    owner, ((MethodInsnNode) insnNode).desc);
+                            ((MethodInsnNode) insnNode).owner = getMappedClass(((MethodInsnNode) insnNode).owner.replace(className, targetName));
+
+                        }
+                        ((MethodInsnNode) insnNode).desc = getMappedMethodDesc(((MethodInsnNode) insnNode).desc);
+                    }
+                    if (insnNode instanceof FieldInsnNode) {
+                        if (className.equals(((FieldInsnNode) insnNode).owner)) {
+                            Class<?> owner = Bootstrap.findClass(getMappedClass(((FieldInsnNode) insnNode).owner.replace(className, targetName)));
+                            ((FieldInsnNode) insnNode).name = getMappedField(((FieldInsnNode) insnNode).name, owner);
+                            ((FieldInsnNode) insnNode).owner = getMappedClass(((FieldInsnNode) insnNode).owner.replace(className, targetName));
+                        }
+                        ((FieldInsnNode) insnNode).desc = getMappedFieldDesc(((FieldInsnNode) insnNode).desc);
+
+                    }
+                    if (insnNode instanceof InvokeDynamicInsnNode) {
+                        Object[] bsmArgs = ((InvokeDynamicInsnNode) insnNode).bsmArgs;
+                        for (int i = 0, bsmArgsLength = bsmArgs.length; i < bsmArgsLength; i++) {
+                            Object a = bsmArgs[i];
+                            if (a instanceof Handle) {
+                                Handle b = new Handle(((Handle) a).getTag()
+                                        , getMappedClass(((Handle) a).getOwner().replace(className, targetName)),
+                                        map(((Handle) a).getName(), ((Handle) a).getOwner().replace(className, targetName), ((Handle) a).getDesc()),
+                                        getMappedDesc(((Handle) a).getDesc()),
+                                        ((Handle) a).isInterface());
+                                bsmArgs[i] = b;
+                            }
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
+        return classNode;
     }
 
     public static String getMappedClass(String mcpName) {
