@@ -22,7 +22,7 @@ import java.security.ProtectionDomain;
 import static org.objectweb.asm.ClassWriter.COMPUTE_FRAMES;
 import static org.objectweb.asm.ClassWriter.COMPUTE_MAXS;
 
-public class GameClassTransformer implements IClassTransformer {
+public class ASMClassTransformer implements IClassTransformer {
     public static ClassNode node(byte[] bytes) {
         if (bytes != null && bytes.length != 0) {
             ClassReader reader = new ClassReader(bytes);

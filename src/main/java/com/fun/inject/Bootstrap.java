@@ -5,10 +5,12 @@ import com.fun.api.InjectionProvider;
 import com.fun.inject.define.Definer;
 import com.fun.inject.mapper.Mapper;
 import com.fun.inject.mapper.RemapException;
+import com.fun.inject.transform.api.mixin.Mixins;
 import com.fun.inject.transform.api.mixin.annotations.Mixin;
-import com.fun.inject.transform.impl.GameClassTransformer;
+import com.fun.inject.transform.impl.ASMClassTransformer;
 import com.fun.inject.transform.api.asm.Transformer;
 import com.fun.inject.transform.api.asm.Transformers;
+import com.fun.inject.transform.impl.MixinClassTransformer;
 import com.fun.inject.utils.InjectUtils;
 import com.fun.inject.utils.Native;
 import com.fun.inject.utils.NativeUtils;
@@ -44,7 +46,8 @@ public class Bootstrap {
     public static int SERVERPORT = 11432;
     public static Map<String, byte[]> classes = new ConcurrentHashMap<>();
     public static Native instrumentation;
-    public static GameClassTransformer transformer;
+    public static ASMClassTransformer asmClassTransformer;
+    public static MixinClassTransformer mixinClassTransformer;
     public static MinecraftType minecraftType = MinecraftType.VANILLA;
     public static MinecraftVersion minecraftVersion = MinecraftVersion.VER_189;
     @Deprecated
@@ -170,8 +173,10 @@ public class Bootstrap {
                     }
                     if (annotationNode.desc.equals("Lcom/fun/inject/transform/api/mixin/annotations/Mixin;")) {
                         Mixin mixin = Mixin.Helper.fromNode(annotationNode);
-                        mixinMap.put(mixin,Mapper.mapRedirect(classNode,classNode.name,
-                                Mapper.getMappedClass(mixin.value())));//. name -> internal name
+                        Mixins.addMixin(
+                                Mapper.mapRedirect(classNode,classNode.name, Mapper.getMappedClass(mixin.value())),
+                                mixin
+                        );
                         remove = true;
                     }
                 }
@@ -303,24 +308,23 @@ public class Bootstrap {
 
     public static void transform() {
         Transformers.init();
-        transformer = new GameClassTransformer();
-        instrumentation.addTransformer(transformer, true);
-
-        //NativeUtils.messageBox("native cl:"+NativeUtils.class.getClassLoader(),"Fish");
+        asmClassTransformer = new ASMClassTransformer();
+        mixinClassTransformer = new MixinClassTransformer();
+        instrumentation.addTransformer(asmClassTransformer);
+        instrumentation.addTransformer(mixinClassTransformer);
 
         for (Transformer transformer : Transformers.transformers) {
             try {
-
                 if (transformer.clazz == null) {
                     continue;
                 }
-
                 NativeUtils.retransformClass(transformer.clazz);
             } catch (Exception e) {
                 e.printStackTrace();
             }
         }
 
+        Mixins.callRetransform();
 
         instrumentation.doneTransform();
 
@@ -355,7 +359,8 @@ public class Bootstrap {
     }
 
     public static void destroyClient() {
-        instrumentation.removeTransformer(transformer);
+        instrumentation.removeTransformer(asmClassTransformer);
+        instrumentation.removeTransformer(mixinClassTransformer);
         Transformers.transformers.forEach(it -> {
             NativeUtils.redefineClass(it.getClazz(), it.getOldBytes());
         });

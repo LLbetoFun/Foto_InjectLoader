@@ -1,7 +1,7 @@
 package com.fun.inject.utils;
 
 
-import com.fun.inject.transform.impl.GameClassTransformer;
+import com.fun.inject.transform.impl.ASMClassTransformer;
 import com.fun.inject.transform.IClassTransformer;
 
 public class Native {
@@ -14,21 +14,8 @@ public class Native {
     public Native() {
     }
 
-    public void addTransformer(IClassTransformer transformer, boolean b) {
-        NativeUtils.transformers.add(transformer);
-    }
-
 
     public void addTransformer(IClassTransformer transformer) {
-        /*try {
-            Class<?> nativeUtils=ClassLoader.getSystemClassLoader().loadClass("injection.com.fun.NativeUtils");
-            Field ft= nativeUtils.getDeclaredField("transformers");
-            ArrayList<ClassFileTransformer> tList= (ArrayList<ClassFileTransformer>) ft.get(null);
-            tList.add(transformer);
-
-        } catch (ClassNotFoundException | NoSuchFieldException | IllegalAccessException e) {
-
-        }*/
         NativeUtils.transformers.add(transformer);
     }
 
@@ -53,7 +40,7 @@ public class Native {
         NativeUtils.doneTransform();
     }
 
-    public void removeTransformer(GameClassTransformer transformer) {
+    public void removeTransformer(IClassTransformer transformer) {
         NativeUtils.transformers.remove(transformer);
     }
 }
