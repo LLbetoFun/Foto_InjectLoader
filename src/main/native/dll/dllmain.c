@@ -678,7 +678,7 @@ extern void JNICALL Load(JAVA* java){
 
 
     jclass agent = findClass(java->jniEnv, "com.fun.inject.Bootstrap");//com.fun.inject.Bootstrap
-    if(!agent) MessageBoxA(NULL, newPackage, "FishCient", 0);
+    if(!agent) MessageBoxA(NULL, jarFile, "Class not found", 0);
 
     JNINativeMethod methods[] = {
             {"inject","()V",(void*) Java_Inject}

@@ -19,7 +19,6 @@ add_library(agent
         src/main/native/dll/dllmain.c
         src/main/native/dll/ReflectiveLoader.c
         src/main/native/java/jvmti.h
-        src/main/native/dll/dllmain.c
 )
 
 add_library(hwidSpoofer

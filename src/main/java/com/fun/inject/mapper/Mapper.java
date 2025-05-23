@@ -129,7 +129,8 @@ public class Mapper {
                     List<Object> values = annotationNode.values;
                     for (int i = 0; i < values.size(); i++) {
                         Object object = values.get(i);
-                        if (object instanceof Type type) {
+                        if (object instanceof Type) {
+                            Type type = (Type) object;
                             values.set(i,Type.getType(getMappedFieldDesc(type.getDescriptor())));
                         }
 
@@ -147,7 +148,8 @@ public class Mapper {
                         List<Object> values = annotationNode.values;
                         for (int i = 0; i < values.size(); i++) {
                             Object object = values.get(i);
-                            if (object instanceof Type type) {
+                            if (object instanceof Type) {
+                                Type type = (Type) object;
                                 values.set(i,Type.getType(getMappedFieldDesc(type.getDescriptor())));
                             }
 

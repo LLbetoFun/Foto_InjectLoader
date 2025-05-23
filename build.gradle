@@ -101,17 +101,16 @@ tasks.register('cmakeConfigure', Exec) {
 }
 
 tasks.register('cmakeBuild', Exec) {
-    dependsOn 'cmakeConfigure'
+    //dependsOn 'cmakeConfigure'
 
     // 允许命令执行失败（手动检查退出码）
-    ignoreExitValue = true
+    //ignoreExitValue = true
 
     if (org.gradle.internal.os.OperatingSystem.current().windows) {
         commandLine 'cmake',
                 '--build', cmakeBuildDir,
                 '--config', cmakeBuildType,
-                '--target', 'all',
-                '--', '-j', '14'
+                '--target', 'all'
     } else {
         commandLine 'cmake',
                 '--build', cmakeBuildDir,
@@ -152,3 +151,8 @@ jar.enabled = false
 
 // 确保 build 任务依赖 shadowJar
 build.dependsOn shadowJar
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
