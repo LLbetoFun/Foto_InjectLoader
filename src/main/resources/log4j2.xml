@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN" monitorInterval="30">
+    <!-- 定义日志输出格式 -->
+    <Properties>
+        <Property name="LOG_PATTERN">%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n</Property>
+        <Property name="LOG_DIR">logs</Property> <!-- 日志存放目录 -->
+    </Properties>
+
+    <!-- 输出到控制台 -->
+    <Appenders>
+        <Console name="Console" target="SYSTEM_OUT">
+            <PatternLayout pattern="${LOG_PATTERN}"/>
+        </Console>
+
+        <!-- 按日期滚动的日志文件 -->
+        <RollingFile name="File" fileName="${LOG_DIR}/app.log"
+                     filePattern="${LOG_DIR}/app-%d{yyyy-MM-dd}.log.gz">
+            <PatternLayout pattern="${LOG_PATTERN}"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy interval="1" modulate="true"/> <!-- 每天滚动 -->
+                <SizeBasedTriggeringPolicy size="100 MB"/> <!-- 单文件最大100MB -->
+            </Policies>
+            <DefaultRolloverStrategy max="30"/> <!-- 最多保留30天日志 -->
+        </RollingFile>
+    </Appenders>
+
+    <!-- 日志级别配置 -->
+    <Loggers>
+        <!-- 默认日志级别 -->
+        <Root level="INFO">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="File"/>
+        </Root>
+
+        <!-- 针对特定包/类设置日志级别 -->
+        <Logger name="com.example" level="DEBUG" additivity="false">
+            <AppenderRef ref="File"/>
+        </Logger>
+    </Loggers>
+</Configuration>

@@ -7,6 +7,7 @@ import com.fun.inject.transform.api.asm.Inject;
 import com.fun.inject.transform.api.asm.Transformer;
 import com.fun.inject.transform.api.asm.Transformers;
 import com.fun.inject.utils.FishClassWriter;
+import com.fun.network.logger.Logger;
 import org.apache.commons.io.FileUtils;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
@@ -98,7 +99,7 @@ public class ASMClassTransformer implements IClassTransformer {
 
                 byte[] newBytes = rewriteClass(node);
                 if (newBytes == null) {
-                    System.out.println(className + " rewriteClass failed");
+                    Logger.info(className + " rewriteClass failed");
                     return null;
                 }
                 File fo = new File(System.getProperty("user.home"), transformer.getName() + ".class");
@@ -110,7 +111,7 @@ public class ASMClassTransformer implements IClassTransformer {
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
-                System.out.println("transformer:" + transformer.getName() + " bytes in " + fo.getAbsolutePath());
+                Logger.info("transformer:" + transformer.getName() + " bytes in " + fo.getAbsolutePath());
 
                 transformer.newBytes = newBytes;
                 return transformer.newBytes;

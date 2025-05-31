@@ -1,6 +1,7 @@
 package com.fun.inject.utils;
 
 import com.fun.inject.transform.IClassTransformer;
+import com.fun.network.logger.Logger;
 import sun.misc.Unsafe;
 
 import java.lang.reflect.Field;
@@ -57,7 +58,7 @@ public class NativeUtils {
         ArrayList<ClassDefiner> classDefiners = NativeUtils.classDefiners;
         for (int i = 0, classDefinersSize = classDefiners.size(); i < classDefinersSize; i++) {
             ClassDefiner classDefiner = classDefiners.get(i);
-            System.out.println("redefine:" + classDefiner.clazz + " error:" + redefineClass(classDefiner.clazz, classDefiner.bytes));
+            Logger.info("redefine:" + classDefiner.clazz + " error:" + redefineClass(classDefiner.clazz, classDefiner.bytes));
         }
         NativeUtils.classDefiners.clear();
     }

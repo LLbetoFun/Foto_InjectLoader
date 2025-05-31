@@ -22,7 +22,7 @@ public class FishClassWriter extends org.objectweb.asm.ClassWriter {
             var3 = Bootstrap.findClass(var1.replace('/', '.'));
             var4 = Bootstrap.findClass(var2.replace('/', '.'));
         } catch (Exception var7) {
-            throw new RuntimeException(var7.toString());
+            return var1;
         }
 
         if (var3.isAssignableFrom(var4)) {

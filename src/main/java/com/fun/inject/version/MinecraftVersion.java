@@ -18,7 +18,12 @@ public enum MinecraftVersion {
         this.ver = ver;
         this.clientNames = clientNames;
     }
-
+    public boolean isOlderThan(MinecraftVersion version) {
+        return ordinal() < version.ordinal();
+    }
+    public boolean isNewerThan(MinecraftVersion version) {
+        return ordinal() > version.ordinal();
+    }
     public static MinecraftVersion getMinecraftVersion() {
         for (MinecraftVersion value : values()) {
             if (System.getProperty("java.library.path").contains(value.ver))

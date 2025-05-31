@@ -7,10 +7,12 @@ import org.objectweb.asm.tree.*;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
+import java.util.HashMap;
+import java.util.Map;
 
 public class ASMUtils {
     public static String slash(String s) {
-        return s.replace('.', '/');
+        return s.replace(".", "/");
     }
 
     public static <T> T getAnnotationValue(AnnotationNode node, String name) {
@@ -56,7 +58,9 @@ public class ASMUtils {
                 }
         return false;
     }
-
+    public static boolean isStaticMethod(MethodNode methodNode) {
+        return (methodNode.access & Opcodes.ACC_STATIC) != 0;
+    }
     public static boolean isRetOpe(int opcode) {
         for (Field field : Opcodes.class.getFields())
             if (field.getName().endsWith("RETURN"))
@@ -67,9 +71,29 @@ public class ASMUtils {
                 }
         return false;
     }
+    // 正确复制指令的方法
+    public static InsnList cloneInsnList(InsnList source) {
+        InsnList copy = new InsnList();
+        Map<LabelNode, LabelNode> labelMap = new HashMap<>();
 
+        // 第一遍：复制所有指令并建立标签映射
+        for (AbstractInsnNode insn : source) {
+            if (insn instanceof LabelNode) {
+                labelMap.put((LabelNode)insn, new LabelNode());
+            }
+        }
+
+        // 第二遍：完成复制并修复跳转
+        for (AbstractInsnNode insn : source) {
+            copy.add(insn.clone(labelMap)); // 使用clone方法处理标签重映射
+        }
+
+        return copy;
+    }
     public static Block getBlock(AbstractInsnNode node, InsnList list) {
-        LabelNode first = null, last = null;
+        LabelNode first = new LabelNode(), last = new LabelNode();
+        list.insertBefore(node,first);
+        list.insert(node,last);
         for (int i = 0; i < list.size(); i++) {
             AbstractInsnNode abstractInsnNode = list.get(i);
             if (abstractInsnNode instanceof LabelNode)

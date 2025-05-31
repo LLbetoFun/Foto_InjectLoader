@@ -3,9 +3,11 @@ package com.fun.inject;
 
 import com.fun.inject.utils.InjectUtils;
 import com.fun.inject.utils.InjectorUtils;
+import com.fun.network.handlers.LoggerConnection;
 import com.sun.tools.attach.VirtualMachine;
 
 import java.io.*;
+import java.net.InetSocketAddress;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.security.ProtectionDomain;
@@ -69,9 +71,6 @@ public class Main {
         File dll = new File(workDir, dllpath);
         InjectorUtils.injectorR(Integer.parseInt(pid), dll.getAbsolutePath());
 
-        //System.out.println("injected in:"+pid);
-
-
     }
 
     public static String getNewPackage() {
@@ -81,6 +80,7 @@ public class Main {
     }
 
     public static void main(String[] args) {
+        LoggerConnection.startServer(new InetSocketAddress(13337));
 
         InjectUtils.searchForProcess();
         start();

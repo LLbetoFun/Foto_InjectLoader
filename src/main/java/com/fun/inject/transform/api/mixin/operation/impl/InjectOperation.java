@@ -5,6 +5,7 @@ import com.fun.inject.transform.api.mixin.annotations.*;
 import com.fun.inject.transform.api.mixin.operation.Operation;
 import com.fun.utils.asm.ASMUtils;
 import com.fun.utils.asm.Block;
+import com.fun.utils.asm.MethodNodeDisassembler;
 import com.fun.utils.asm.MixinTargetParser;
 import lombok.AllArgsConstructor;
 import org.objectweb.asm.tree.*;
@@ -34,7 +35,7 @@ public class InjectOperation implements Operation {
             List<AnnotationNode>[] visibleParameterAnnotations = targetMethod.visibleParameterAnnotations;
             for (int i = 0; i < visibleParameterAnnotations.length; i++) {
                 List<AnnotationNode> nodes = visibleParameterAnnotations[i];
-                final int index = i;
+                final int index = i + (ASMUtils.isStaticMethod(targetMethod)? 0 : 1);
                 nodes.stream()
                         .filter(annotationNode -> annotationNode.desc.contains(ASMUtils.slash(Local.class.getName())))
                         .forEach(annotationNode -> {
@@ -50,23 +51,23 @@ public class InjectOperation implements Operation {
                         && node instanceof VarInsnNode
                         && !localMap.containsKey(((VarInsnNode) node).var))
                 .forEach(storeNode -> localMap.put(((VarInsnNode) storeNode).var, ((VarInsnNode) storeNode).var+maxLocalIndex));
-
         targetMethod.instructions.forEach(insnNode -> {
             if(insnNode instanceof VarInsnNode)
                 ((VarInsnNode) insnNode).var = localMap.getOrDefault(((VarInsnNode) insnNode).var,((VarInsnNode) insnNode).var);
         });
-
     }
-    private void insert(InsnList targetList){
-        AbstractInsnNode insertPoint = getInsertPoint(targetList);
+    private void insert(MethodNode sourceMethod){
+        InsnList sourceList = sourceMethod.instructions;
+        InsnList targetList = ASMUtils.cloneInsnList(targetMethod.instructions);
+        AbstractInsnNode insertPoint = getInsertPoint(sourceList);
 
-        Block targetBlock = ASMUtils.getBlock(insertPoint,targetList);
+        Block targetBlock = ASMUtils.getBlock(insertPoint,sourceList);
 
         At.Shift shift = info.at().shift();
 
         if(shift == At.Shift.BEFORE)
-            targetList.insert(targetBlock.start,targetMethod.instructions);
-        else targetList.insert(targetBlock.end,targetMethod.instructions);
+            sourceList.insert(targetBlock.start,targetList);
+        else sourceList.insert(targetBlock.end,targetList);
     }
     private AbstractInsnNode getInsertPoint(InsnList instructions) {
         At targetInfo = info.at();
@@ -126,7 +127,8 @@ public class InjectOperation implements Operation {
             removeLastRet();
             processLocals();
 
-            insert(methodNode.instructions);
+            insert(methodNode);
+            //MethodNodeDisassembler.printMethodInstructions(methodNode);
         }
     }
 }

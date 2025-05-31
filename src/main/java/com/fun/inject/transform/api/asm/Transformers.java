@@ -45,7 +45,7 @@ public class Transformers {
 
     public static byte[] rewriteClass(ClassNode node) {
         try {
-            ClassWriter writer = new FishClassWriter(COMPUTE_MAXS | COMPUTE_FRAMES);
+            ClassWriter writer = new FishClassWriter(COMPUTE_MAXS | COMPUTE_FRAMES);//
             node.accept(writer);
             return writer.toByteArray();
         } catch (Exception e) {

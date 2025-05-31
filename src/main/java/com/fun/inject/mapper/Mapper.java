@@ -4,6 +4,7 @@ import com.fun.inject.Bootstrap;
 import com.fun.inject.utils.FishClassWriter;
 import com.fun.inject.version.MinecraftType;
 import com.fun.inject.version.MinecraftVersion;
+import com.fun.utils.asm.ASMUtils;
 import com.fun.utils.file.IOUtils;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
@@ -94,6 +95,7 @@ public class Mapper {
 
 
     public static boolean isMethodDesc(String desc) {
+        if(desc == null) return false;
         return (desc.contains("(") && desc.contains(")"));
     }
 
@@ -113,7 +115,6 @@ public class Mapper {
     }
 
     public static byte[] mapBytes(byte[] bytes, MinecraftType mT) {
-
         ClassNode classNode = null;
         String desc = null;
         try {
@@ -127,10 +128,10 @@ public class Mapper {
                 for (AnnotationNode annotationNode : classNode.visibleAnnotations) {
                     //System.out.println(annotationNode.desc);
                     List<Object> values = annotationNode.values;
+                    if(values==null) continue;
                     for (int i = 0; i < values.size(); i++) {
                         Object object = values.get(i);
-                        if (object instanceof Type) {
-                            Type type = (Type) object;
+                        if (object instanceof Type type) {
                             values.set(i,Type.getType(getMappedFieldDesc(type.getDescriptor())));
                         }
 
@@ -146,6 +147,7 @@ public class Mapper {
                     for (AnnotationNode annotationNode : methodNode.visibleAnnotations) {
                         //System.out.println(annotationNode.desc);
                         List<Object> values = annotationNode.values;
+                        if(values==null) continue;
                         for (int i = 0; i < values.size(); i++) {
                             Object object = values.get(i);
                             if (object instanceof Type) {
@@ -284,11 +286,11 @@ public class Mapper {
                             Class<?> owner = Bootstrap.findClass(getMappedClass(((MethodInsnNode) insnNode).owner.replace(className, targetName)));
 
                             ((MethodInsnNode) insnNode).name = getMappedMethod(((MethodInsnNode) insnNode).name,
-                                    owner, ((MethodInsnNode) insnNode).desc);
+                                    owner, getMappedMethodDesc(((MethodInsnNode) insnNode).desc));
                             ((MethodInsnNode) insnNode).owner = getMappedClass(((MethodInsnNode) insnNode).owner.replace(className, targetName));
 
                         }
-                        ((MethodInsnNode) insnNode).desc = getMappedMethodDesc(((MethodInsnNode) insnNode).desc);
+                        //((MethodInsnNode) insnNode).desc = getMappedMethodDesc(((MethodInsnNode) insnNode).desc);
                     }
                     if (insnNode instanceof FieldInsnNode) {
                         if (className.equals(((FieldInsnNode) insnNode).owner)) {
@@ -296,10 +298,11 @@ public class Mapper {
                             ((FieldInsnNode) insnNode).name = getMappedField(((FieldInsnNode) insnNode).name, owner);
                             ((FieldInsnNode) insnNode).owner = getMappedClass(((FieldInsnNode) insnNode).owner.replace(className, targetName));
                         }
-                        ((FieldInsnNode) insnNode).desc = getMappedFieldDesc(((FieldInsnNode) insnNode).desc);
+                        //((FieldInsnNode) insnNode).desc = getMappedFieldDesc(((FieldInsnNode) insnNode).desc);
 
                     }
                     if (insnNode instanceof InvokeDynamicInsnNode) {
+                        ((InvokeDynamicInsnNode) insnNode).desc = ((InvokeDynamicInsnNode) insnNode).desc.replace(className, Mapper.getMappedClass(targetName));
                         Object[] bsmArgs = ((InvokeDynamicInsnNode) insnNode).bsmArgs;
                         for (int i = 0, bsmArgsLength = bsmArgs.length; i < bsmArgsLength; i++) {
                             Object a = bsmArgs[i];
@@ -310,6 +313,10 @@ public class Mapper {
                                         getMappedDesc(((Handle) a).getDesc()),
                                         ((Handle) a).isInterface());
                                 bsmArgs[i] = b;
+                            }
+                            if(a instanceof Type type){
+                                String desc = type.toString();
+                                bsmArgs[i] = Type.getType(desc.replace(className, Mapper.getMappedClass(targetName)));
                             }
                         }
                     }
@@ -322,6 +329,7 @@ public class Mapper {
     }
 
     public static String getMappedClass(String mcpName) {
+        mcpName = ASMUtils.slash(mcpName);
         boolean isArray = mcpName.contains("[]");
         String cn = mcpName.endsWith("[]") ? mcpName.substring(0, mcpName.length() - 2) : mcpName;
         String t = classMap.get(cn);

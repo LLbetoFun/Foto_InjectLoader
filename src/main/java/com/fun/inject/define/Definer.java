@@ -79,10 +79,11 @@ public class Definer {
                 if (ReflectionUtils.invokeMethod(Bootstrap.classLoader, "findLoadedClass", new Class[]{String.class}, className.replace('/', '.')) == null) {
 
                     NativeUtils.defineClass(Bootstrap.classLoader, bytes);
+                    if(className.contains("example")) System.out.println("Class " + className + " has been defined");
                 }
 
             } catch (Throwable e) {
-                e.printStackTrace();
+                if(!(e instanceof LinkageError)) e.printStackTrace();
 
             }
         }

@@ -17,6 +17,8 @@ import com.fun.inject.utils.NativeUtils;
 import com.fun.inject.utils.ReflectionUtils;
 import com.fun.inject.version.MinecraftType;
 import com.fun.inject.version.MinecraftVersion;
+import com.fun.network.handlers.LoggerConnection;
+import com.fun.network.logger.Logger;
 import com.fun.utils.asm.ASMUtils;
 import com.fun.utils.file.FileUtils;
 import org.objectweb.asm.Type;
@@ -27,6 +29,7 @@ import java.io.*;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.net.InetSocketAddress;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -130,7 +133,7 @@ public class Bootstrap {
             Class<?> c = findClass("net.minecraft.client.Minecraft");//com/heypixel/heypixel/HeyPixel
             if (c != null) {
                 minecraftType = MinecraftType.MCP;
-                if (ReflectionUtils.getFieldValue(c, minecraftVersion == MinecraftVersion.VER_1181 ? "f_90981_" : "field_71432_P") != null)//m_91087_
+                if (ReflectionUtils.getFieldValue(c, minecraftVersion .isNewerThan(MinecraftVersion.VER_1181)  ? "f_90981_" : "field_71432_P") != null)//m_91087_
                     minecraftType = MinecraftType.FORGE;
             }
 
@@ -156,8 +159,8 @@ public class Bootstrap {
     private static void parseAPIsInCache(File jar) {
         classes.keySet().forEach((s -> {
             byte[] classBytes = classes.get(s);
+            if (classBytes == null) throw new RuntimeException("Can't find class " + s + " in jar " + jar);
             ClassNode classNode = Transformers.node(classBytes);
-            boolean remove = false;
             if(classNode.visibleAnnotations != null) {
                 Iterator<AnnotationNode> iterator = classNode.visibleAnnotations.iterator();
                 while (iterator.hasNext()) {
@@ -177,12 +180,12 @@ public class Bootstrap {
                                 Mapper.mapRedirect(classNode,classNode.name, Mapper.getMappedClass(mixin.value())),
                                 mixin
                         );
-                        remove = true;
+
                     }
                 }
             }
-            if(!remove) classes.put(s,Transformers.rewriteClass(classNode));
-            else classes.remove(s);
+            //Logger.info("Loaded class " + s + " in jar " + jar);
+            classes.put(s,Transformers.rewriteClass(classNode));
         }));
 
     }
@@ -194,6 +197,7 @@ public class Bootstrap {
 
     public synchronized static void start() throws URISyntaxException, IOException, InterruptedException {//启动方法
         isRemote = true;
+        LoggerConnection.connect(new InetSocketAddress(13337));
         File f = new File(System.getProperty("user.home") + "\\foto_path.txt");
         BufferedReader bufferedreader = new BufferedReader(new FileReader(f));
         String line = "";
@@ -207,8 +211,10 @@ public class Bootstrap {
         while (running) {
             for (Object o : Thread.getAllStackTraces().keySet().toArray()) {
                 Thread thread = (Thread) o;
+//                if(thread.getContextClassLoader()!=null) {
+//                    Logger.info(thread.getName()+":"+thread.getContextClassLoader().getClass().getName());
+//                };
                 if (thread.getName().equals("Client thread") || thread.getName().equals("Render thread")) {
-
                     classLoader = thread.getContextClassLoader();
                     running = false;
                     break;
@@ -220,21 +226,22 @@ public class Bootstrap {
 
         File injectionDir = new File(Main.workDir, "/injections");
         if(!injectionDir.exists())injectionDir.mkdirs();
-        Arrays.stream(injectionDir.listFiles()).forEach(file -> {
-            try {
-                if(FileUtils.getFileExtension(file).equals(".jar"))loadJar(file);
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-        });
 
         try {
             if (classLoader.getClass().getName().contains("launchwrapper") || classLoader.getClass().getName().contains("modlauncher")) {
                 cacheJar(new File(jarPath));
                 defineClassesInCache();
+                clearClassCache();
             } else if (ClassLoader.getSystemClassLoader() != (classLoader)) {
                 loadJar((URLClassLoader) classLoader, new File(jarPath).toURI().toURL());
             }
+            Arrays.stream(injectionDir.listFiles()).forEach(file -> {
+                try {
+                    if(FileUtils.getFileExtension(file).equals(".jar"))loadJar(file);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            });
 
 
             Class<?> agentClass = findClass(Bootstrap.class.getName());
@@ -262,7 +269,7 @@ public class Bootstrap {
         injectionsMap.keySet().forEach(injection -> {
             try {
                 String c = injectionsMap.get(injection);
-                System.out.println("Init injection main class:"+c);
+                Logger.info("Init injection main class:"+c);
                 Class<?> mainClass = findClass(c);
                 Object fotoInjection= mainClass.getConstructor().newInstance();
                 for (Method m : mainClass.getDeclaredMethods()) {
@@ -328,7 +335,7 @@ public class Bootstrap {
 
         instrumentation.doneTransform();
 
-        System.out.println("Transform classes successfully");
+        Logger.info("Transform classes successfully");
 
 
     }
@@ -344,8 +351,8 @@ public class Bootstrap {
         } catch (RemapException e) {
             e.printStackTrace();
         }
-
-        System.out.println("foto core initialized!");
+        LoggerConnection.connect(new InetSocketAddress(13337));
+        Logger.info("foto core initialized!");
 
 
     }
@@ -364,6 +371,7 @@ public class Bootstrap {
         Transformers.transformers.forEach(it -> {
             NativeUtils.redefineClass(it.getClazz(), it.getOldBytes());
         });
+        Mixins.destroy();
         //todo destroy
         NativeUtils.destroy();
     }

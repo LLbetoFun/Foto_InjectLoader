@@ -23,4 +23,9 @@ public class Mixins {
         if(matched == null) return null;
         return matched.transform(bytes);
     }
+    public static void destroy(){
+        transformers.forEach((transformer) -> {
+            NativeUtils.redefineClass(transformer.getTargetClass(),transformer.getOldBytes());
+        });
+    }
 }

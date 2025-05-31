@@ -22,6 +22,7 @@ public class MixinTransformer {
     private final Mixin mixin;
     private final Class<?> targetClass;
     private final List<Operation> operations= Lists.newArrayList();
+    private byte[] oldBytes;
     public MixinTransformer(ClassNode classNode, Mixin mixin) {
         this.classNode = classNode;
         this.mixin = mixin;
@@ -32,6 +33,7 @@ public class MixinTransformer {
         operations.add(operation);
     }
     public byte[] transform(byte[] bytes) {
+        oldBytes = bytes;
         ClassNode node = Transformers.node(bytes);
         node.methods.forEach(methodNode ->
                 operations.forEach(operation ->

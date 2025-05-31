@@ -5,6 +5,7 @@ import com.fun.inject.Bootstrap;
 import com.fun.inject.Main;
 import com.fun.inject.version.MinecraftType;
 import com.fun.inject.version.MinecraftVersion;
+import com.fun.network.handlers.LoggerConnection;
 import com.sun.jna.platform.win32.User32;
 import com.sun.jna.platform.win32.WinDef;
 import com.sun.jna.ptr.IntByReference;
@@ -14,6 +15,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.instrument.UnmodifiableClassException;
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 
 public class InjectUtils {
